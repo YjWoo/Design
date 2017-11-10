@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">简言</string>
+    <string name="title_home">主页</string>
+    <string name="title_dashboard">动态</string>
+    <string name="title_notifications">设置</string>
+    <string name="submit">提交</string>
+    <string name="login_login">登录</string>
+    <string name="login_register">注册</string>
+    <string name="hostname">http://192.168.1.106:80</string>
+</resources>
