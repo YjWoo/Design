@@ -3,6 +3,7 @@ package com.indigo.vincent.Activity;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -21,13 +22,20 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Vibrator;
 import android.support.annotation.Nullable;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.RadioButton;
+import android.widget.Spinner;
+import android.widget.ThemedSpinnerAdapter;
 
 import com.indigo.vincent.Bean.Article;
 import com.indigo.vincent.Util.GeneratePictureView;
@@ -36,10 +44,17 @@ import com.indigo.vincent.Util.ToastDebug;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /**
  * 卡片内容分享、保存页面
@@ -72,8 +87,14 @@ public class Activity_Capture extends AppCompatActivity implements SensorEventLi
     //读取用户名信息
     SharedPreferences myPreference;
     String user_name;
+    String tag;
+    String add_tag;
+    String[] tags;
+
+    Handler uiHandler;
     //获取位置
     LocationManager locationManager;
+    LocationListener locationListener;
     String address;
     LocationUtil locate;
 
@@ -150,27 +171,6 @@ public class Activity_Capture extends AppCompatActivity implements SensorEventLi
         }
     }
 
-    LocationListener locationListener = new LocationListener() {
-
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {
-        }
-
-        @Override
-        public void onProviderEnabled(String provider) {
-        }
-
-        @Override
-        public void onProviderDisabled(String provider) {
-        }
-
-        @Override
-        public void onLocationChanged(Location location) {
-            // 更新当前设备的位置信息
-            address = locate.getAddress(location);
-        }
-    };
-
     class Handler_Capture extends Handler {
         WeakReference<Activity> weakReference;
 
@@ -229,8 +229,29 @@ public class Activity_Capture extends AppCompatActivity implements SensorEventLi
         user_name = myPreference.getString("user_name", "");
 
         //获取位置
+        locationListener = new LocationListener() {
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+            }
+
+            @Override
+            public void onLocationChanged(Location location) {
+                // 更新当前设备的位置信息
+                address = locate.getAddress(location);
+            }
+        };
+
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        new Thread(networkTask).start();
+        new Thread(locateTask).start();
 
         pd = new ProgressDialog(this);
         pd.setMessage("请稍后...");
@@ -238,10 +259,101 @@ public class Activity_Capture extends AppCompatActivity implements SensorEventLi
         initRadioButton(data, title);
         //初始化控件填充内容
         gpv.init(data, title, user_name, "via Vicent Woo");
-//        getActionBar().setDisplayHomeAsUpEnabled(true);
+        //标签赋值
+        uiHandler = new Handler();
+        new Thread(getTags).start();
     }
 
-    Runnable networkTask = new Runnable() {
+    //tag的UI Runnable接口
+    Runnable uiRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // 初始化tag标签
+            Spinner spinner = (Spinner) findViewById(R.id.category);
+            // 建立数据源
+            // 建立Adapter并且绑定数据源，simple_spinner_item/simple_spinner_dropdown_item系统默认布局
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(Activity_Capture.this, android.R.layout.simple_spinner_item, tags);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            //绑定 Adapter到控件
+            spinner.setAdapter(adapter);
+            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view,
+                                           int pos, long id) {
+                    String[] languages = tags;
+                    tag = languages[pos];
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    // Another interface callback
+                }
+            });
+        }
+    };
+
+    Runnable addTags = new Runnable() {
+        @Override
+        public void run() {
+            OkHttpClient client = new OkHttpClient();
+            FormBody.Builder builder = new FormBody.Builder();
+            builder.add("ID", user_name).add("METHOD", "addTags").add("TAG", add_tag);
+            RequestBody formBody = builder.build();
+            String host = getResources().getString(R.string.hostname);
+            Request request = new Request.Builder()
+                    .url(host + "/Tag")
+                    .post(formBody)
+                    .build();
+            try {
+                Response response = client.newCall(request).execute();
+                if (response.isSuccessful()) {
+                    String text = response.body().string();
+                    Log.i(TAG, text);
+                } else {
+                    throw new IOException("Unexpected code " + response);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            new Thread(getTags).start();
+        }
+    };
+
+    //获取tags
+    Runnable getTags = new Runnable() {
+        @Override
+        public void run() {
+            OkHttpClient client = new OkHttpClient();
+            FormBody.Builder builder = new FormBody.Builder();
+            builder.add("ID", user_name).add("METHOD", "getTags");
+            RequestBody formBody = builder.build();
+            String host = getResources().getString(R.string.hostname);
+            Request request = new Request.Builder()
+                    .url(host + "/Tag")
+                    .post(formBody)
+                    .build();
+            try {
+                Response response = client.newCall(request).execute();
+                if (response.isSuccessful()) {
+                    String text = response.body().string();
+                    Log.i(TAG, text);
+                    text = text.substring(1, text.length() - 1);
+                    tags = text.split(",");
+                    for (int i = 0; i < tags.length; i++) {
+                        tags[i] = tags[i].trim();
+                        Log.i(TAG, tags[i]);
+                    }
+                    uiHandler.post(uiRunnable);
+                } else {
+                    throw new IOException("Unexpected code " + response);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
+    //获取经纬度，定位
+    Runnable locateTask = new Runnable() {
         @Override
         public void run() {
             Looper.prepare();
@@ -294,6 +406,26 @@ public class Activity_Capture extends AppCompatActivity implements SensorEventLi
     }
 
     /**
+     * 新建标签
+     *
+     * @param v
+     */
+    public void addTag(final View v) {
+        final EditText inputServer = new EditText(this);
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("建立标签").setView(inputServer)
+                .setNegativeButton("Cancel", null);
+        builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                add_tag = inputServer.getText().toString().trim();
+                if (add_tag.length() != 0)
+                    new Thread(addTags).start();
+            }
+        });
+        builder.show();
+    }
+
+    /**
      * 保存
      *
      * @param v
@@ -307,7 +439,7 @@ public class Activity_Capture extends AppCompatActivity implements SensorEventLi
             public void run() {
                 try {
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_hhmmss");
-                    final File realFile = saveBitmap(sdf.format(new Date()) + ".jpg");
+                    final File realFile = saveBitmap(tag + "_" + sdf.format(new Date()) + ".jpg");
                     if (realFile == null) {
                         Message message = mHandler.obtainMessage(FAILE);
                         message.obj = "保存失败,文件过大!";

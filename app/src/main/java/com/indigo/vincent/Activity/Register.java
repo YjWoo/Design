@@ -60,6 +60,14 @@ public class Register extends AppCompatActivity {
                 pwdrp.setText("");
                 return;
             }
+            if (id.length() == 0 || pw.length() == 0) {
+                Looper.prepare();
+                Toast.makeText(Register.this, "用户名和密码不能为空！请重新输入！", Toast.LENGTH_SHORT).show();
+                Looper.loop();
+                pwd.setText("");
+                pwdrp.setText("");
+                return;
+            }
             try {
                 SendByHttpClient(id, pw);
             } catch (Exception e) {
@@ -87,7 +95,7 @@ public class Register extends AppCompatActivity {
             if (tempResponse.equals("exists")) {
                 //用户名存在
                 Toast.makeText(this, "用户已存在，请重新输入！", Toast.LENGTH_SHORT).show();
-            } else if(tempResponse.equals("1")){
+            } else if (tempResponse.equals("1")) {
                 Toast.makeText(this, "注册成功！", Toast.LENGTH_SHORT).show();
                 Intent it = new Intent(Register.this, Login.class);
                 startActivity(it);

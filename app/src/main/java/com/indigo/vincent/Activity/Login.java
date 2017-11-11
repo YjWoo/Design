@@ -104,7 +104,7 @@ public class Login extends AppCompatActivity {
                 startActivity(it);
             } else {
                 Looper.prepare();
-                Toast.makeText(this, "用户不存在，请重新输入！", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "用户名或密码不正确，请重新输入！", Toast.LENGTH_SHORT).show();
                 Looper.loop();
             }
         } else {
