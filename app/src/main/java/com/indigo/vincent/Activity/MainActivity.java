@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Article article;
     EditText edt;
     Button btn_getData;
-    String path = "http://www.gushiwen.org/";
+    String path;
     long mTime = 0;
     ProgressDialog pd;
 
@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         setContentView(R.layout.activity_main);
+        path = getResources().getString(R.string.hostpage);
 
         myMenu = new MyMenu(this);
 

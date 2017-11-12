@@ -6,5 +6,6 @@
     <string name="submit">提交</string>
     <string name="login_login">登录</string>
     <string name="login_register">注册</string>
-    <string name="hostname">http://192.168.1.105:80</string>
+    <string name="hostname">http://10.126.201.84:80</string>
+    <string name="hostpage">http://m.eeo.com.cn/2017/1030/315729.shtml</string>
 </resources>
